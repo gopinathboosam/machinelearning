@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Nov 23 08:26:15 2020
+
+@author: BoosamG
+"""
+
+#Support Vector Machine - Non Linear Model
+
+#Import Libraries
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+#Import Dataset
+dataset = pd.read_csv('Social_Network_Ads.csv')
+x = dataset.iloc[:,:-1].values
+y = dataset.iloc[:,-1].values
+
+#Split the data into Train set and Test Set
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.2,random_state=0)
+
+print(x_train)
+print("**************************************")
+print(x_test)
+print("**************************************")
+print(y_train)
+print("**************************************")
+print(y_test)
+print("**************************************")
+
+
+#Feature SCaling
+from sklearn.preprocessing import StandardScaler
+sc = StandardScaler()
+x_train = sc.fit_transform(x_train)
+x_test = sc.transform(x_test)
+
+#Train the svm with Train set 
+from sklearn.svm import SVC
+classifier = SVC(kernel='rbf',random_state=0)#with non-Linear Kernel
+classifier.fit(x_train, y_train)
+
+
+
+
+#Predict new result
+y_pred = classifier.predict(sc.transform([[30,87000]]))
+print(y_pred)
+
+#Predict Test results
+y_pred_new = classifier.predict(x_test)
+print(np.concatenate((y_pred_new.reshape(len(y_pred_new),1),y_test.reshape(len(y_test),1)),axis = 1))#Concatenating vertically
+print(np.concatenate((y_pred_new,y_test),axis = 0))#Horizantal Concatenation 
+
+#Making Confusion matrix and accuracy Score
+from sklearn.metrics import confusion_matrix, accuracy_score
+cm = confusion_matrix(y_test,y_pred_new)
+print(cm)
+accuracy_score(y_test,y_pred_new)
+
+
+#k-fold cross validation
+from sklearn.model_selection import cross_val_score
+accuracies = cross_val_score(estimator = classifier, X = x_train, y = y_train, cv = 10)
+print("Accuracy: {:.2f} %".format(accuracies.mean()*100))
+print("Standard Deviation: {:.2f} %".format(accuracies.std()*100))
+
+#Grid Search for finding optimal value for hyperparameters which gives best model
+from sklearn.model_selection import GridSearchCV
+params = [{'C':[0.25,0.5,0.75,1], 'kernel' : ['linear']},
+          {'C':[0.25,0.5,0.75,1], 'kernel' : ['rbf'], 'gamma' : [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]}]
+grid_search = GridSearchCV(estimator = classifier, param_grid= params, scoring = 'accuracy', cv = 10, n_jobs =-1)
+grid_search.fit(x_train, y_train)
+best_accuracy = grid_search.best_score_
+best_params = grid_search.best_params_
+print("Best Accuracy: {:.2f} %".format(best_accuracy.mean()*100))
+print("Best patams:", best_params)
+
+#visualizing trian resuls
+from matplotlib.colors import ListedColormap
+x_set, y_set = sc.inverse_transform(x_train), y_train
+x1, x2 = np.meshgrid(np.arange(start = x_set[:, 0].min() - 10, stop = x_set[:, 0].max() + 10, step = 0.25),
+                     np.arange(start = x_set[:, 1].min() - 1000, stop = x_set[:, 1].max() + 1000, step = 0.25))
+plt.contourf(x1, x2, classifier.predict(sc.transform(np.array([x1.ravel(), x2.ravel()]).T)).reshape(x1.shape),
+             alpha = 0.75, cmap = ListedColormap(('red', 'green')))
+plt.xlim(x1.min(), x1.max())
+plt.ylim(x2.min(), x2.max())
+for i, j in enumerate(np.unique(y_set)):
+    plt.scatter(x_set[y_set == j, 0], x_set[y_set == j, 1], c = ListedColormap(('red', 'green'))(i), label = j)
+plt.title('KNN CLassifier  (Training set)')
+plt.xlabel('Age')
+plt.ylabel('Estimated Salary')
+plt.legend()
+plt.show()
+
+#Visualizing test results
+from matplotlib.colors import ListedColormap
+x_set, y_set = sc.inverse_transform(x_test), y_test
+x1, x2 = np.meshgrid(np.arange(start = x_set[:, 0].min() - 10, stop = x_set[:, 0].max() + 10, step = 0.25),
+                     np.arange(start = x_set[:, 1].min() - 1000, stop = x_set[:, 1].max() + 1000, step = 0.25))
+plt.contourf(x1, x2, classifier.predict(sc.transform(np.array([x1.ravel(), x2.ravel()]).T)).reshape(x1.shape),
+             alpha = 0.75, cmap = ListedColormap(('red', 'green')))
+plt.xlim(x1.min(), x1.max())
+plt.ylim(x2.min(), x2.max())
+for i, j in enumerate(np.unique(y_set)):
+    plt.scatter(x_set[y_set == j, 0], x_set[y_set == j, 1], c = ListedColormap(('red', 'green'))(i), label = j)
+plt.title('KNN Classifier  (Test set)')
+plt.xlabel('Age')
+plt.ylabel('Estimated Salary')
+plt.legend()
+plt.show()
